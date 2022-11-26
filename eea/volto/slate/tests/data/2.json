@@ -3,7 +3,13 @@
     "type": "p",
     "children": [
       {
-        "text": "Since version 2.0, lxml comes with a dedicated Python package for dealing with HTML: lxml.html. \nIt is based on lxml's HTML parser, but provides a special Element API for HTML elements, as well as a number of utilities for common HTML processing tasks."
+        "text": "Since version 2.0."
+      },
+      {
+        "text": "\n"
+      },
+      {
+        "text": "It is based."
       }
     ]
   },
@@ -11,7 +17,7 @@
     "type": "p",
     "children": [
       {
-        "text": "The normal HTML parser is capable of handling broken HTML, but for pages that are far enough from HTML to call them 'tag soup', it may still fail to parse the page in a useful way. A way to deal with this is ElementSoup, which deploys the well-known BeautifulSoup parser to build an lxml HTML tree."
+        "text": "The normal HTML parser."
       }
     ]
   },
@@ -19,7 +25,7 @@
     "type": "p",
     "children": [
       {
-        "text": "However, note that the most common problem with web pages is the lack of (or the existence of incorrect) encoding declarations. It is therefore often sufficient to only use the encoding detection of BeautifulSoup, called UnicodeDammit, and to leave the rest to lxml's own HTML parser, which is several times faster."
+        "text": "However, note that."
       }
     ]
   }

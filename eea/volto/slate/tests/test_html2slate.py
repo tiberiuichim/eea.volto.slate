@@ -13,7 +13,8 @@ from pkg_resources import resource_filename
 from eea.volto.slate.html2slate import (convert_linebreaks_to_spaces,
                                         convert_tabs_to_spaces,
                                         remove_space_before_after_endline,
-                                        remove_space_follow_space)
+                                        remove_space_follow_space,
+                                        text_to_slate)
 
 
 def read_data(filename):
@@ -58,7 +59,15 @@ class TestTextUtilities(unittest.TestCase):
         text = convert_linebreaks_to_spaces(html)
         assert text == "<h1>   Hello <span> World!</span>   </h1>"
 
-    def test_remove_space_follow_space_in_sibling_inline_node(self):
+    def test_remove_space_follow_space_nospace(self):
+        text = remove_space_follow_space("World!", None)
+        assert text == "World!"
+
+    def test_remove_space_follow_space_multispace(self):
+        text = remove_space_follow_space("hello     World!", None)
+        assert text == "hello World!"
+
+    def test_remove_space_follow_space_simple(self):
         html = "<h1>   Hello <span> World!</span>   </h1>"
         fragments = html5parser.fragments_fromstring(html)
         h1 = fragments[0]
@@ -67,11 +76,36 @@ class TestTextUtilities(unittest.TestCase):
         text = remove_space_follow_space(" World!", span)
         assert text == "World!"
 
-        # const dom = new JSDOM(html);
-        # const body = dom.window.document.body;
-        # const span = body.querySelector('span');
-        #
-        # expect(htmlUtils.removeSpaceFollowSpace(' World!', span)).toBe('World!');
+    def test_remove_space_follow_space_prev_sibling(self):
+        html = "<h1>   Hello <b>bla </b><span> World!</span>   </h1>"
+        fragments = html5parser.fragments_fromstring(html)
+        h1 = fragments[0]
+        span = h1.find("{http://www.w3.org/1999/xhtml}span")
+
+        text = remove_space_follow_space(" World!", span)
+        assert text == "World!"
+
+    def test_remove_space_follow_space_prev_sibling_compound(self):
+        html = "<h1>   Hello <b><i>bla </i></b><span> World!</span>   </h1>"
+        fragments = html5parser.fragments_fromstring(html)
+        h1 = fragments[0]
+        span = h1.find("{http://www.w3.org/1999/xhtml}span")
+
+        text = remove_space_follow_space(" World!", span)
+        assert text == "World!"
+
+    # TODO: redo this test with the deserializer
+    # def test_remove_space_follow_space_sibling_inline(self):
+    #     html = "<h1>   <b>Hello </b> World!   </h1>"
+    #     fragments = html5parser.fragments_fromstring(html)
+    #     h1 = fragments[0]
+    #     b = h1.find("{http://www.w3.org/1999/xhtml}span")
+    #     # const textNode = b.nextSibling;
+    #     # expect(textNode.textContent).toBe(' World!   ');
+    #     #
+    #     # expect(htmlUtils.removeSpaceFollowSpace(' World!    ', textNode)).toBe(
+    #     #   'World! ',
+    #     # );
 
 
 class TestConvertHTML2Slate(unittest.TestCase):
@@ -79,16 +113,15 @@ class TestConvertHTML2Slate(unittest.TestCase):
 
     maxDiff = None
 
-    # def test_convert_simple_string(self):
-    #     """test_convert_simple_string."""
-    #     res = text_to_slate("Hello world")
-    #     self.assertEqual(res, [{"children": [{"text": "Hello world"}],
-    #                             "type": "p"}])
+    def test_convert_simple_string(self):
+        """test_convert_simple_string."""
+        res = text_to_slate("Hello world")
+        self.assertEqual(res, [{"children": [{"text": "Hello world"}], "type": "p"}])
 
-    # def test_convert_simple_paragraph(self):
-    #     """test_convert_simple_paragraph."""
-    #     res = text_to_slate("<p>Hello world</p>")
-    #     self.assertEqual(res, [{"children": [{"text": "Hello world"}], "type": "p"}])
+    def test_convert_simple_paragraph(self):
+        """test_convert_simple_paragraph."""
+        res = text_to_slate("<p>Hello world</p>")
+        self.assertEqual(res, [{"children": [{"text": "Hello world"}], "type": "p"}])
 
     # def test_convert_text_and_a_tag(self):
     #     """test_convert_simple_paragraph."""
@@ -158,16 +191,16 @@ class TestConvertHTML2Slate(unittest.TestCase):
     #         res,
     #         read_json("1.json"),
     #     )
-    #
-    # def test_convert_case_multiple_p(self):
-    #     """test_convert_case_multiple_p."""
-    #     text = read_data("2.html")
-    #     res = text_to_slate(text)
-    #
-    #     self.assertEqual(
-    #         res,
-    #         read_json("2.json"),
-    #     )
+
+    def test_convert_case_multiple_p(self):
+        """test_convert_case_multiple_p."""
+        text = read_data("2.html")
+        res = text_to_slate(text)
+
+        self.assertEqual(
+            res,
+            read_json("2.json"),
+        )
 
     # def test_one_list_item(self):
     #    """test_one_list_item."""

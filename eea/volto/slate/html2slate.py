@@ -17,7 +17,9 @@ from .config import DEFAULT_BLOCK_TYPE, KNOWN_BLOCK_TYPES
 
 
 def is_whitespace(text):
-    "Returns true if the text is only whitespace characters"
+    """Returns true if the text is only whitespace characters"""
+
+    # TODO: rewrite using mozila code
 
     if not isinstance(text, six.string_types):
         return False
@@ -98,17 +100,15 @@ def merge_adjacent_text_nodes(children):
     return result
 
 
-# export const removeSpaceBeforeAfterEndLine = (text) => {
-#   text = text.replace(/\s+\n/gm, '\n'); // space before endline
-#   text = text.replace(/\n\s+/gm, '\n'); // space after endline
-#   return text;
-# };
-
-
 SPACE_BEFORE_ENDLINE = re.compile(r"\s+\n", re.M)
 SPACE_AFTER_DEADLINE = re.compile(r"\n\s+", re.M)
 TAB = re.compile(r"\t", re.M)
 LINEBREAK = re.compile(r"\n", re.M)
+MULTIPLE_SPACE = re.compile(r" ( +)", re.M)
+FIRST_SPACE = re.compile("^ ", re.M)
+FIRST_ANY_SPACE = re.compile(r"^\s", re.M)
+FIRST_ALL_SPACE = re.compile(r"^\s+", re.M)
+ANY_SPACE_AT_END = re.compile(r"\s$", re.M)
 
 
 def remove_space_before_after_endline(text):
@@ -154,15 +154,98 @@ def remove_space_follow_space(text, node):
     # }
     #
     # return text;
+    text = re.sub(MULTIPLE_SPACE, " ", text)
 
-    pass
+    if not text.startswith(" "):
+        return text
+
+    if isinstance(node, str):
+        return text  # Can't do traversing without reference to proper node
+
+    previous = node.getprevious()
+    if previous is None:
+        head = node.getparent().text
+        if head.endswith(" "):
+            text = re.sub(FIRST_SPACE, "", text)
+    else:
+        prev_text = collapse_inline_space(previous, expanded=True)
+        if prev_text.endswith(" "):
+            return re.sub(FIRST_SPACE, "", text)
+
+    return text
 
 
-def collapse_inline_space(text):
+# export const isInline = (node) =>
+#   node &&
+#   (node.nodeType === TEXT_NODE || INLINE_ELEMENTS.includes(node.nodeName));
+
+
+def is_inline_dom(node):
+    if isinstance(node, str):
+        return True
+
+    if node is None:
+        return False
+
+    return False
+
+
+def remove_element_edges(text, node):
+    # export const removeElementEdges = (text, node) => {
+    #   if (
+    #     !isInline(node.parentNode) &&
+    #     !node.previousSibling &&
+    #     text.match(/^\s/)
+    #   ) {
+    #     text = text.replace(/^\s+/, '');
+    #   }
+    #
+    #   if (text.match(/\s$/) && !node.nextSibling && !isInline(node.parentNode)) {
+    #     text = text.replace(/\s$/, '');
+    #   }
+    #
+    #   return text;
+    # };
+    if isinstance(node, str):
+        return text
+
+    previous = node.getprevious()
+    next_ = node.getnext()
+    parent = node.getparent()
+
+    if (
+        (not is_inline_dom(parent))
+        and (previous is None)
+        and re.match(FIRST_ANY_SPACE, text)
+    ):
+        text = re.sub(FIRST_ALL_SPACE, "", text)
+
+    if (
+        re.match(ANY_SPACE_AT_END, text)
+        and (next_ is None)
+        and (not is_inline_dom(parent))
+    ):
+        text = re.sub(ANY_SPACE_AT_END, "", text)
+
+    return text
+
+
+def collapse_inline_space(node, expanded=False):
     """See
 
     https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
     """
+    text = ""
+
+    if isinstance(node, str):
+        text = node
+    elif node is not None:
+        text = node.text
+        if expanded:
+            text = "".join(
+                collapse_inline_space(n)
+                for n in [node.text or ""] + list(node.iterchildren())
+            )
 
     # 1. all spaces and tabs immediately before and after a line break are ignored
     text = remove_space_before_after_endline(text)
@@ -173,12 +256,12 @@ def collapse_inline_space(text):
     # 3. Convert all line breaks to spaces
     text = convert_linebreaks_to_spaces(text)
 
-    # // 4. Any space immediately following another space
-    # // (even across two separate inline elements) is ignored
-    # text = removeSpaceFollowSpace(text, node);
-    #
+    # 4. Any space immediately following another space
+    # (even across two separate inline elements) is ignored
+    text = remove_space_follow_space(text, node)
+
     # // 5. Sequences of spaces at the beginning and end of an element are removed
-    # text = removeElementEdges(text, node);
+    text = remove_element_edges(text, node)
 
     return text
 
@@ -207,105 +290,98 @@ class HTML2Slate(object):
         if node is None:
             return []
 
-        # import pdb
-        #
-        # pdb.set_trace()
-
         if isinstance(node, six.string_types):
             if is_whitespace(node):
                 return []
             text = collapse_inline_space(node)
 
-            return {"text": text} if text else None
+            return [{"text": text}] if text else None
 
-        # tagname = tag_name(node)
-        #
-        # handler = None
-        #
-        # if node.attrib.get("data-slate-data"):
-        #     handler = self.handle_slate_data_element
-        # else:
-        #     handler = getattr(self, "handle_tag_{}".format(tagname), None)
-        #     if not handler and tagname in KNOWN_BLOCK_TYPES:
-        #         handler = self.handle_block
-        #
-        # if handler:
-        #     element = handler(node)
-        #     if node.tail and clean_whitespace(node.tail):
-        #         return [element] + self.deserialize(node.tail)
-        #     return [element]
+        tagname = tag_name(node)
+
+        handler = None
+
+        if node.attrib.get("data-slate-data"):
+            handler = self.handle_slate_data_element
+        else:
+            handler = getattr(self, "handle_tag_{}".format(tagname), None)
+            if not handler and tagname in KNOWN_BLOCK_TYPES:
+                handler = self.handle_block
+
+        if handler:
+            element = handler(node)
+            if node.tail and collapse_inline_space(node.tail):  # was clean_whitespace
+                return [element] + self.deserialize(node.tail)
+            return [element]
 
         # fallback, "skips" the node
         return self.handle_fallback(node)
 
-    def normalize(self, value):
-        return value
+    def deserialize_children(self, node):
+        """deserialize_children.
 
-    # def deserialize_children(self, node):
-    #     """deserialize_children.
-    #
-    #     :param node:
-    #     """
-    #     nodes = [node.text]
-    #     for child in node.iterchildren():
-    #         nodes.append(child)
-    #         if is_whitespace(child.tail):
-    #             nodes.append(child.tail)
-    #
-    #     res = []
-    #     for x in nodes:
-    #         if x is not None:
-    #             res += self.deserialize(x)
-    #
-    #     return res
-    #
-    # def handle_tag_a(self, node):
-    #     """handle_tag_a.
-    #
-    #     :param node:
-    #     """
-    #     attrs = node.attrib
-    #     link = attrs.get("href", "")
-    #
-    #     element = {"type": "a", "children": self.deserialize_children(node)}
-    #     if link:
-    #         if link.startswith("http") or link.startswith("//"):
-    #             # TO DO: implement external link
-    #             pass
-    #         else:
-    #             element["data"] = {
-    #                 "link": {
-    #                     "internal": {
-    #                         "internal_link": [
-    #                             {
-    #                                 "@id": link,
-    #                             }
-    #                         ]
-    #                     }
-    #                 }
-    #             }
-    #
-    #     return element
-    #
-    # def handle_tag_br(self, node):
-    #     """handle_tag_br.
-    #
-    #     :param node:
-    #     """
-    #     return {"text": "\n"}
-    #
-    # def handle_block(self, node):
-    #     """handle_block.
-    #
-    #     :param node:
-    #     """
-    #     return {"type": tag_name(node),
-    #             "children": self.deserialize_children(node)}
+        :param node:
+        """
+        nodes = [node.text]
+        for child in node.iterchildren():
+            nodes.append(child)
+            if is_whitespace(child.tail):
+                nodes.append(child.tail)
+
+        res = []
+        for x in nodes:
+            if x is not None:
+                res += self.deserialize(x)
+
+        return res
+
+    def handle_tag_a(self, node):
+        """handle_tag_a.
+
+        :param node:
+        """
+        attrs = node.attrib
+        link = attrs.get("href", "")
+
+        element = {"type": "a", "children": self.deserialize_children(node)}
+        if link:
+            if link.startswith("http") or link.startswith("//"):
+                # TO DO: implement external link
+                pass
+            else:
+                element["data"] = {
+                    "link": {
+                        "internal": {
+                            "internal_link": [
+                                {
+                                    "@id": link,
+                                }
+                            ]
+                        }
+                    }
+                }
+
+        return element
+
+    def handle_tag_br(self, node):
+        """handle_tag_br.
+
+        :param node:
+        """
+        return {"text": "\n"}
+
+    def handle_block(self, node):
+        """handle_block.
+
+        :param node:
+        """
+        return {"type": tag_name(node), "children": self.deserialize_children(node)}
+
     #
     # # def handle_tag_b(self, node):
     # #     # TO DO: implement <b> special cases
     # #     return self.handle_block(node)
-    #
+
     # def handle_slate_data_element(self, node):
     #     """handle_slate_data_element.
     #
@@ -322,30 +398,30 @@ class HTML2Slate(object):
         # nodes = self.deserialize_children(node) + self.deserialize(node.tail)
         # return nodes
 
-    # def normalize(self, value):
-    #     " Normalize value to match Slate constraints "
-    #
-    #     assert isinstance(value, list)
-    #     value = [v for v in value if v is not None]
-    #
-    #     # all top-level elements in the value need to be block tags
-    #     if value and [x for x in value if is_inline(value[0])]:
-    #         value = [{"type": DEFAULT_BLOCK_TYPE, "children": value}]
-    #
-    #     # stack = deque(value)
-    #     #
-    #     # while stack:
-    #     #     child = stack.pop()
-    #     #     children = child.get("children", None)
-    #     #     if children is not None:
-    #     #         children = [c for c in children if c]
-    #     #         # merge adjacent text nodes
-    #     #         child["children"] = merge_adjacent_text_nodes(children)
-    #     #         stack.extend(child["children"])
-    #     #
-    #     #         # self._pad_with_space(child["children"])
-    #
-    #     return value
+    def normalize(self, value):
+        "Normalize value to match Slate constraints"
+
+        assert isinstance(value, list)
+        value = [v for v in value if v is not None]
+
+        # all top-level elements in the value need to be block tags
+        if value and [x for x in value if is_inline(value[0])]:
+            value = [{"type": DEFAULT_BLOCK_TYPE, "children": value}]
+
+        # stack = deque(value)
+        #
+        # while stack:
+        #     child = stack.pop()
+        #     children = child.get("children", None)
+        #     if children is not None:
+        #         children = [c for c in children if c]
+        #         # merge adjacent text nodes
+        #         child["children"] = merge_adjacent_text_nodes(children)
+        #         stack.extend(child["children"])
+        #
+        #         # self._pad_with_space(child["children"])
+
+        return value
 
     # def _pad_with_space(self, children):
     #     """ Mutate the children array in-place. It pads them with
