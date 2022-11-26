@@ -5,18 +5,19 @@ A port of volto-slate' deserialize.js module
 # pylint: disable=import-error,no-name-in-module,too-few-public-methods,
 # pylint: disable=not-callable,no-self-use,unused-argument,invalid-name
 
-import json
+# import json
 import re
-from collections import deque
 
 import six
 from lxml.html import html5parser
 
 from .config import DEFAULT_BLOCK_TYPE, KNOWN_BLOCK_TYPES
 
+# from collections import deque
+
 
 def is_whitespace(text):
-    " Returns true if the text is only whitespace characters"
+    "Returns true if the text is only whitespace characters"
 
     if not isinstance(text, six.string_types):
         return False
@@ -24,23 +25,23 @@ def is_whitespace(text):
     return len(re.sub(r"\s|\t|\n", "", text)) == 0
 
 
-def clean_whitespace(c):
-    """Cleans up non-significant whitespace text.
-
-    - remove tabs, they're not usable in html
-    - replace new lines with a whitespace (this is how browsers would render)
-    """
-
-    funcs = [
-        lambda t: re.sub(r"\n$", " ", t),
-        lambda t: re.sub(r"\n", " ", t),
-        lambda t: re.sub(r"\t", "", t),
-    ]
-    for f in funcs:
-        c = f(c)
-
-    # TO DO: collapse multiple \n to a single space?
-    return c
+# def clean_whitespace(c):
+#     """Cleans up non-significant whitespace text.
+#
+#     - remove tabs, they're not usable in html
+#     - replace new lines with a whitespace (this is how browsers would render)
+#     """
+#
+#     funcs = [
+#         lambda t: re.sub(r"\n$", " ", t),
+#         lambda t: re.sub(r"\n", " ", t),
+#         lambda t: re.sub(r"\t", "", t),
+#     ]
+#     for f in funcs:
+#         c = f(c)
+#
+#     # TO DO: collapse multiple \n to a single space?
+#     return c
 
 
 def tag_name(el):
@@ -71,7 +72,7 @@ def is_inline(el):
 
 
 def merge_adjacent_text_nodes(children):
-    " Given a list of Slate elements, it combines adjacent texts nodes"
+    "Given a list of Slate elements, it combines adjacent texts nodes"
 
     ranges = []
     for i, v in enumerate(children):
@@ -92,20 +93,106 @@ def merge_adjacent_text_nodes(children):
             result.append(v)
         if i in range_dict:
             result.append(
-                {"text": u"".join([c["text"]
-                                   for c in children[i: range_dict[i] + 1]])}
+                {"text": "".join([c["text"] for c in children[i : range_dict[i] + 1]])}
             )
     return result
+
+
+# export const removeSpaceBeforeAfterEndLine = (text) => {
+#   text = text.replace(/\s+\n/gm, '\n'); // space before endline
+#   text = text.replace(/\n\s+/gm, '\n'); // space after endline
+#   return text;
+# };
+
+
+SPACE_BEFORE_ENDLINE = re.compile(r"\s+\n", re.M)
+SPACE_AFTER_DEADLINE = re.compile(r"\n\s+", re.M)
+TAB = re.compile(r"\t", re.M)
+LINEBREAK = re.compile(r"\n", re.M)
+
+
+def remove_space_before_after_endline(text):
+    text = re.sub(SPACE_BEFORE_ENDLINE, "\n", text)
+    text = re.sub(SPACE_AFTER_DEADLINE, "\n", text)
+    return text
+
+
+def convert_tabs_to_spaces(text):
+    return re.sub(TAB, " ", text)
+
+
+def convert_linebreaks_to_spaces(text):
+    return re.sub(LINEBREAK, " ", text)
+
+
+def remove_space_follow_space(text, node):
+    # // Any space immediately following another space (even across two separate
+    # // inline elements) is ignored (rule 4)
+    # text = text.replace(/ ( +)/gm, ' ');
+    # if (!text.startsWith(' ')) return text;
+    #
+    # if (node.previousSibling) {
+    #   if (node.previousSibling.nodeType === TEXT_NODE) {
+    #     if (node.previousSibling.textContent.endsWith(' ')) {
+    #       return text.replace(/^ /, '');
+    #     }
+    #   } else if (isInline(node.previousSibling)) {
+    #     const prevText = collapseInlineSpace(node.previousSibling);
+    #     if (prevText.endsWith(' ')) {
+    #       return text.replace(/^ /, '');
+    #     }
+    #   }
+    # } else {
+    #   const parent = node.parentNode;
+    #   if (parent.previousSibling) {
+    #     //  && isInline(parent.previousSibling)
+    #     const prevText = collapseInlineSpace(parent.previousSibling);
+    #     if (prevText && prevText.endsWith(' ')) {
+    #       return text.replace(/^ /, '');
+    #     }
+    #   }
+    # }
+    #
+    # return text;
+
+    pass
+
+
+def collapse_inline_space(text):
+    """See
+
+    https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
+    """
+
+    # 1. all spaces and tabs immediately before and after a line break are ignored
+    text = remove_space_before_after_endline(text)
+
+    # 2. Next, all tab characters are handled as space characters
+    text = convert_tabs_to_spaces(text)
+
+    # 3. Convert all line breaks to spaces
+    text = convert_linebreaks_to_spaces(text)
+
+    # // 4. Any space immediately following another space
+    # // (even across two separate inline elements) is ignored
+    # text = removeSpaceFollowSpace(text, node);
+    #
+    # // 5. Sequences of spaces at the beginning and end of an element are removed
+    # text = removeElementEdges(text, node);
+
+    return text
 
 
 class HTML2Slate(object):
     """A parser for HTML to slate conversion
 
     If you need to handle some custom slate markup, inherit and extend
+
+    See https://github.com/plone/volto/blob/5f9066a70b9f3b60d462fc96a1aa7027ff9bbac0/packages/volto-slate/src/editor/deserialize.js
     """
 
     def to_slate(self, text):
-        " Convert text to a slate value. A slate value is a list of elements "
+        "Convert text to a slate value. A slate value is a list of elements"
 
         fragments = html5parser.fragments_fromstring(text)
         nodes = []
@@ -114,170 +201,180 @@ class HTML2Slate(object):
 
         return self.normalize(nodes)
 
-    def deserialize_children(self, node):
-        """deserialize_children.
-
-        :param node:
-        """
-        nodes = [node.text]
-        for child in node.iterchildren():
-            nodes.append(child)
-            if is_whitespace(child.tail):
-                nodes.append(child.tail)
-
-        res = []
-        for x in nodes:
-            if x is not None:
-                res += self.deserialize(x)
-
-        return res
-
-    def handle_tag_a(self, node):
-        """handle_tag_a.
-
-        :param node:
-        """
-        attrs = node.attrib
-        link = attrs.get("href", "")
-
-        element = {"type": "a", "children": self.deserialize_children(node)}
-        if link:
-            if link.startswith("http") or link.startswith("//"):
-                # TO DO: implement external link
-                pass
-            else:
-                element["data"] = {
-                    "link": {
-                        "internal": {
-                            "internal_link": [
-                                {
-                                    "@id": link,
-                                }
-                            ]
-                        }
-                    }
-                }
-
-        return element
-
-    def handle_tag_br(self, node):
-        """handle_tag_br.
-
-        :param node:
-        """
-        return {"text": "\n"}
-
-    def handle_block(self, node):
-        """handle_block.
-
-        :param node:
-        """
-        return {"type": tag_name(node),
-                "children": self.deserialize_children(node)}
-
-    # def handle_tag_b(self, node):
-    #     # TO DO: implement <b> special cases
-    #     return self.handle_block(node)
-
-    def handle_slate_data_element(self, node):
-        """handle_slate_data_element.
-
-        :param node:
-        """
-        element = json.loads(node.attrib["data-slate-data"])
-        element["children"] = self.deserialize_children(node)
-        return element
-
     def deserialize(self, node):
-        " Deserialize a node into a _list_ of slate elements"
+        "Deserialize a node into a _list_ of slate elements"
 
         if node is None:
             return []
 
+        # import pdb
+        #
+        # pdb.set_trace()
+
         if isinstance(node, six.string_types):
             if is_whitespace(node):
                 return []
-            return [{"text": clean_whitespace(node)}]
+            text = collapse_inline_space(node)
 
-        tagname = tag_name(node)
+            return {"text": text} if text else None
 
-        handler = None
-
-        if node.attrib.get("data-slate-data"):
-            handler = self.handle_slate_data_element
-        else:
-            handler = getattr(self, "handle_tag_{}".format(tagname), None)
-            if not handler and tagname in KNOWN_BLOCK_TYPES:
-                handler = self.handle_block
-
-        if handler:
-            element = handler(node)
-            if node.tail and clean_whitespace(node.tail):
-                return [element] + self.deserialize(node.tail)
-            return [element]
+        # tagname = tag_name(node)
+        #
+        # handler = None
+        #
+        # if node.attrib.get("data-slate-data"):
+        #     handler = self.handle_slate_data_element
+        # else:
+        #     handler = getattr(self, "handle_tag_{}".format(tagname), None)
+        #     if not handler and tagname in KNOWN_BLOCK_TYPES:
+        #         handler = self.handle_block
+        #
+        # if handler:
+        #     element = handler(node)
+        #     if node.tail and clean_whitespace(node.tail):
+        #         return [element] + self.deserialize(node.tail)
+        #     return [element]
 
         # fallback, "skips" the node
         return self.handle_fallback(node)
 
-    def handle_fallback(self, node):
-        " Unknown tags (for example span) are handled as pipe-through "
-
-        nodes = self.deserialize_children(node) + self.deserialize(node.tail)
-        return nodes
-
     def normalize(self, value):
-        " Normalize value to match Slate constraints "
-
-        assert isinstance(value, list)
-        value = [v for v in value if v is not None]
-
-        # all top-level elements in the value need to be block tags
-        if value and [x for x in value if is_inline(value[0])]:
-            value = [{"type": DEFAULT_BLOCK_TYPE, "children": value}]
-
-        stack = deque(value)
-
-        while stack:
-            child = stack.pop()
-            children = child.get("children", None)
-            if children is not None:
-                children = [c for c in children if c]
-                # merge adjacent text nodes
-                child["children"] = merge_adjacent_text_nodes(children)
-                stack.extend(child["children"])
-
-                # self._pad_with_space(child["children"])
-
         return value
 
-    def _pad_with_space(self, children):
-        """ Mutate the children array in-place. It pads them with
-        'empty spaces'.
+    # def deserialize_children(self, node):
+    #     """deserialize_children.
+    #
+    #     :param node:
+    #     """
+    #     nodes = [node.text]
+    #     for child in node.iterchildren():
+    #         nodes.append(child)
+    #         if is_whitespace(child.tail):
+    #             nodes.append(child.tail)
+    #
+    #     res = []
+    #     for x in nodes:
+    #         if x is not None:
+    #             res += self.deserialize(x)
+    #
+    #     return res
+    #
+    # def handle_tag_a(self, node):
+    #     """handle_tag_a.
+    #
+    #     :param node:
+    #     """
+    #     attrs = node.attrib
+    #     link = attrs.get("href", "")
+    #
+    #     element = {"type": "a", "children": self.deserialize_children(node)}
+    #     if link:
+    #         if link.startswith("http") or link.startswith("//"):
+    #             # TO DO: implement external link
+    #             pass
+    #         else:
+    #             element["data"] = {
+    #                 "link": {
+    #                     "internal": {
+    #                         "internal_link": [
+    #                             {
+    #                                 "@id": link,
+    #                             }
+    #                         ]
+    #                     }
+    #                 }
+    #             }
+    #
+    #     return element
+    #
+    # def handle_tag_br(self, node):
+    #     """handle_tag_br.
+    #
+    #     :param node:
+    #     """
+    #     return {"text": "\n"}
+    #
+    # def handle_block(self, node):
+    #     """handle_block.
+    #
+    #     :param node:
+    #     """
+    #     return {"type": tag_name(node),
+    #             "children": self.deserialize_children(node)}
+    #
+    # # def handle_tag_b(self, node):
+    # #     # TO DO: implement <b> special cases
+    # #     return self.handle_block(node)
+    #
+    # def handle_slate_data_element(self, node):
+    #     """handle_slate_data_element.
+    #
+    #     :param node:
+    #     """
+    #     element = json.loads(node.attrib["data-slate-data"])
+    #     element["children"] = self.deserialize_children(node)
+    #     return element
+    #
+    def handle_fallback(self, node):
+        "Unknown tags (for example span) are handled as pipe-through"
+        return node
 
-        Extract from Slate docs:
-        https://docs.slatejs.org/concepts/02-nodes#blocks-vs-inlines
+        # nodes = self.deserialize_children(node) + self.deserialize(node.tail)
+        # return nodes
 
-        You can define which nodes are treated as inline nodes by overriding
-        the editor.isInline function. (By default it always returns false.).
-        Note that inline nodes cannot be the first or last child of a parent
-        block, nor can it be next to another inline node in the children array.
-        Slate will automatically space these with { text: '' } children by
-        default with normalizeNode.
+    # def normalize(self, value):
+    #     " Normalize value to match Slate constraints "
+    #
+    #     assert isinstance(value, list)
+    #     value = [v for v in value if v is not None]
+    #
+    #     # all top-level elements in the value need to be block tags
+    #     if value and [x for x in value if is_inline(value[0])]:
+    #         value = [{"type": DEFAULT_BLOCK_TYPE, "children": value}]
+    #
+    #     # stack = deque(value)
+    #     #
+    #     # while stack:
+    #     #     child = stack.pop()
+    #     #     children = child.get("children", None)
+    #     #     if children is not None:
+    #     #         children = [c for c in children if c]
+    #     #         # merge adjacent text nodes
+    #     #         child["children"] = merge_adjacent_text_nodes(children)
+    #     #         stack.extend(child["children"])
+    #     #
+    #     #         # self._pad_with_space(child["children"])
+    #
+    #     return value
 
-        Elements can either contain block elements or inline elements
-        intermingled with text nodes as children. But elements cannot contain
-        some children that are blocks and some that are inlines.
-        """
-
-        # TO DO: needs reimplementation according to above info
-        if children == 0:
-            children.append({"text": ""})
-            return
-
-        if not children[0].get("text"):
-            children.insert(0, {"text": ""})
-        if not children[-1].get("text"):
-            children.append({"text": ""})
+    # def _pad_with_space(self, children):
+    #     """ Mutate the children array in-place. It pads them with
+    #     'empty spaces'.
+    #
+    #     Extract from Slate docs:
+    #     https://docs.slatejs.org/concepts/02-nodes#blocks-vs-inlines
+    #
+    #     You can define which nodes are treated as inline nodes by overriding
+    #     the editor.isInline function. (By default it always returns false.).
+    #     Note that inline nodes cannot be the first or last child of a parent
+    #     block, nor can it be next to another inline node in the children array.
+    #     Slate will automatically space these with { text: '' } children by
+    #     default with normalizeNode.
+    #
+    #     Elements can either contain block elements or inline elements
+    #     intermingled with text nodes as children. But elements cannot contain
+    #     some children that are blocks and some that are inlines.
+    #     """
+    #
+    #     # TO DO: needs reimplementation according to above info
+    #     if children == 0:
+    #         children.append({"text": ""})
+    #         return
+    #
+    #     if not children[0].get("text"):
+    #         children.insert(0, {"text": ""})
+    #     if not children[-1].get("text"):
+    #         children.append({"text": ""})
 
 
 def text_to_slate(text):

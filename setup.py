@@ -42,7 +42,7 @@ setup(
     install_requires=[
         "setuptools",
         # -*- Extra requirements: -*-
-        "html5lib",
+        "html5lib",     # used in corelation with lxml
     ],
     extras_require={
         "test": [
