@@ -35,7 +35,7 @@ ANY_SPACE_AT_END = re.compile(r"\s$", re.M)
 #     return el.tag.replace("{%s}" % el.nsmap["html"], "")
 
 
-def is_inline(el):
+def is_inline_slate(el):
     """Returns true if the element is a text node
 
     Some richtext editors provide support for "inline elements", which is to
@@ -131,7 +131,7 @@ def remove_space_follow_space(text, node):
 
     previous = node.prev
     if previous is None:
-        head = node.getparent().text
+        head = node.parent.text
         if head.endswith(" "):
             text = FIRST_SPACE.sub("", text)
     else:
@@ -142,12 +142,17 @@ def remove_space_follow_space(text, node):
     return text
 
 
-def is_inline_dom(node):
-    if isinstance(node, str):
+# export const isInline = (node) =>
+#   node &&
+#   (node.nodeType === TEXT_NODE || INLINE_ELEMENTS.includes(node.nodeName));
+
+
+def is_inline(node):
+    if isinstance(node, str) or node.type == TEXT_NODE:
         return True
 
-    if node is None:
-        return False
+    if node.tag in INLINE_ELEMENTS:
+        return True
 
     return False
 
@@ -168,26 +173,16 @@ def remove_element_edges(text, node):
     #
     #   return text;
     # };
-    if isinstance(node, str):
-        return text
-
     previous = node.prev
     next_ = node.next
     parent = node.parent
 
-    if (
-        (not is_inline_dom(parent))
-        and (previous is None)
-        and re.match(FIRST_ANY_SPACE, text)
-    ):
+    if (not is_inline(parent)) and (previous is None) and FIRST_ANY_SPACE.search(text):
         text = FIRST_ALL_SPACE.sub("", text)
 
-    if (
-        re.match(ANY_SPACE_AT_END, text)
-        and (next_ is None)
-        and (not is_inline_dom(parent))
-    ):
-        text = ANY_SPACE_AT_END.sub("", text)
+    if ANY_SPACE_AT_END.search(text):
+        if ((next_ is None) and (not is_inline(parent))) or next_.tag == "br":
+            text = ANY_SPACE_AT_END.sub("", text)
 
     return text
 
@@ -245,7 +240,9 @@ class HTML2Slate(object):
         fragments = fragments_fromstring(text)
         nodes = []
         for f in fragments:
-            nodes += self.deserialize(f)
+            slate_nodes = self.deserialize(f)
+            if slate_nodes:
+                nodes += slate_nodes
 
         return self.normalize(nodes)
 
@@ -363,7 +360,7 @@ class HTML2Slate(object):
         value = [v for v in value if v is not None]
 
         # all top-level elements in the value need to be block tags
-        if value and [x for x in value if is_inline(value[0])]:
+        if value and [x for x in value if is_inline_slate(value[0])]:
             value = [{"type": DEFAULT_BLOCK_TYPE, "children": value}]
 
         stack = deque(value)
@@ -428,6 +425,97 @@ def text_to_slate(text):
 #         return False
 #
 #     return len(re.sub(r"\s|\t|\n", "", text)) == 0
-# export const isInline = (node) =>
-#   node &&
-#   (node.nodeType === TEXT_NODE || INLINE_ELEMENTS.includes(node.nodeName));
+
+INLINE_ELEMENTS = [
+    "A",
+    "ABBR",
+    "ACRONYM",
+    "AUDIO",
+    "B",
+    "BDI",
+    "BDO",
+    "BIG",
+    "BR",
+    "BUTTON",
+    "CANVAS",
+    "CITE",
+    "CODE",
+    "DATA",
+    "DATALIST",
+    "DEL",
+    "DFN",
+    "EM",
+    "EMBED",
+    "I",
+    "IFRAME",
+    "IMG",
+    "INPUT",
+    "INS",
+    "KBD",
+    "LABEL",
+    "MAP",
+    "MARK",
+    "METER",
+    "NOSCRIPT",
+    "OBJECT",
+    "OUTPUT",
+    "PICTURE",
+    "PROGRESS",
+    "Q",
+    "RUBY",
+    "S",
+    "SAMP",
+    "SCRIPT",
+    "SELECT",
+    "SLOT",
+    "SMALL",
+    "SPAN",
+    "STRONG",
+    "SUB",
+    "SUP",
+    "SVG",
+    "TEMPLATE",
+    "TEXTAREA",
+    "TIME",
+    "U",
+    "TT",
+    "VAR",
+    "VIDEO",
+    "WBR",
+]
+
+BLOCK_ELEMENTS = [
+    "ADDRESS",
+    "ARTICLE",
+    "ASIDE",
+    "BLOCKQUOTE",
+    "DETAILS",
+    "DIALOG",
+    "DD",
+    "DIV",
+    "DL",
+    "DT",
+    "FIELDSET",
+    "FIGCAPTION",
+    "FIGURE",
+    "FOOTER",
+    "FORM",
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H5",
+    "H6",
+    "HEADER",
+    "HGROUP",
+    "HR",
+    "LI",
+    "MAIN",
+    "NAV",
+    "OL",
+    "P",
+    "PRE",
+    "SECTION",
+    "TABLE",
+    "UL",
+]
