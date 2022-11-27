@@ -173,25 +173,25 @@ class TestConvertHTML2Slate(unittest.TestCase):
             ],
         )
 
-    # def test_convert_text_and_tag(self):
-    #     """test_convert_simple_paragraph."""
-    #     res = text_to_slate("Hello <strong>world</strong> mixed <i>content</i>.")
-    #
-    #     self.assertEqual(
-    #         res,
-    #         [
-    #             {
-    #                 "children": [
-    #                     {"text": "Hello "},
-    #                     {"children": [{"text": "world"}], "type": "strong"},
-    #                     {"text": " mixed "},
-    #                     {"children": [{"text": "content"}], "type": "i"},
-    #                     {"text": "."},
-    #                 ],
-    #                 "type": "p",
-    #             }
-    #         ],
-    #     )
+    def test_convert_text_and_tag(self):
+        """test_convert_simple_paragraph."""
+        res = text_to_slate("Hello <strong>world</strong> mixed <i>content</i>.")
+
+        self.assertEqual(
+            res,
+            [
+                {
+                    "children": [
+                        {"text": "Hello "},
+                        {"children": [{"text": "world"}], "type": "strong"},
+                        {"text": " mixed "},
+                        {"children": [{"text": "content"}], "type": "i"},
+                        {"text": "."},
+                    ],
+                    "type": "p",
+                }
+            ],
+        )
 
     # # def test_merge_text_nodes(self):
     # #     """test_merge_text_nodes."""
@@ -231,15 +231,15 @@ class TestConvertHTML2Slate(unittest.TestCase):
     # #         ],
     # #     )
 
-    # def test_convert_case_simple_p(self):
-    #     """test_convert_case_simple_p."""
-    #     text = read_data("1.html")
-    #     res = text_to_slate(text)
-    #
-    #     self.assertEqual(
-    #         res,
-    #         read_json("1.json"),
-    #     )
+    def test_convert_case_simple_p(self):
+        """test_convert_case_simple_p."""
+        text = read_data("1.html")
+        res = text_to_slate(text)
+
+        self.assertEqual(
+            res,
+            read_json("1.json"),
+        )
 
     # def test_convert_case_multiple_p(self):
     #     """test_convert_case_multiple_p."""
@@ -251,37 +251,46 @@ class TestConvertHTML2Slate(unittest.TestCase):
     #         read_json("2.json"),
     #     )
 
-    # # def test_one_list_item(self):
-    # #    """test_one_list_item."""
-    # #    text = """<li>      <a
-    # #    href="/case-study-hub/CS-brown-bears-Italy"
-    # #    >Brown bear (<em>ursus arctos</em>) in Italy</a>
-    # #    </li>
-    # #    </ul>"""
-    # #    res = text_to_slate(text)
-    # #
-    # #    self.assertEqual(
-    # #        res,
-    # #        [{"children": [
-    # #            {"text": ""},
-    # #            {"children": [
-    # #                {"text": "Brown bear ("},
-    # #                {"children": [{"text": "ursus arctos"}], "type": "em"},
-    # #                {"text": ") in Italy"}, ],
-    # #             "data": {
-    # #                 "link": {
-    # #                     "internal": {
-    # #                         "internal_link": [
-    # #                             {"@id":
-    # #                              "/case-study-hub/CS-brown-bears-Italy"}
-    # #                         ]
-    # #                     }
-    # #                 }},
-    # #             "type": "a", },
-    # #            {"text": ""}, ],
-    # #          "type": "li", }],
-    # #    )
-    # #
+    # def test_one_list_item(self):
+    #     text = """<li>      <a
+    #    href="/case-study-hub/CS-brown-bears-Italy"
+    #    >Brown bear (<em>ursus arctos</em>) in Italy</a>
+    #    </li>
+    #    </ul>"""
+    #     res = text_to_slate(text)
+    #
+    #     self.assertEqual(
+    #         res,
+    #         [
+    #             {
+    #                 "children": [
+    #                     {"text": ""},
+    #                     {
+    #                         "children": [
+    #                             {"text": "Brown bear ("},
+    #                             {"children": [{"text": "ursus arctos"}], "type": "em"},
+    #                             {"text": ") in Italy"},
+    #                         ],
+    #                         "data": {
+    #                             "link": {
+    #                                 "internal": {
+    #                                     "internal_link": [
+    #                                         {
+    #                                             "@id": "/case-study-hub/CS-brown-bears-Italy"
+    #                                         }
+    #                                     ]
+    #                                 }
+    #                             }
+    #                         },
+    #                         "type": "a",
+    #                     },
+    #                     {"text": ""},
+    #                 ],
+    #                 "type": "li",
+    #             }
+    #         ],
+    #     )
+
     # # def test_convert_slate_output_markup(self):
     # #    """test_convert_slate_output_markup."""
     # #    text = read_data("5.html")

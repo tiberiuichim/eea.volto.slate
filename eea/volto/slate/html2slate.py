@@ -319,8 +319,7 @@ class HTML2Slate(object):
 
         :param node:
         """
-        attrs = node.attrib
-        link = attrs.get("href", "")
+        link = node["href"] if "href" in node.attrs else ""
 
         element = {"type": "a", "children": self.deserialize_children(node)}
         if link:
