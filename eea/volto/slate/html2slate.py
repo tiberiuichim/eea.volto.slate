@@ -2,8 +2,6 @@
 
 A port of volto-slate' deserialize.js module
 """
-# pylint: disable=import-error,no-name-in-module,too-few-public-methods,
-# pylint: disable=not-callable,no-self-use,unused-argument,invalid-name
 
 import json
 import re
@@ -12,16 +10,6 @@ from collections import deque
 from lxml.html import html5parser
 
 from .config import DEFAULT_BLOCK_TYPE, KNOWN_BLOCK_TYPES
-
-# def is_whitespace(text):
-#     """Returns true if the text is only whitespace characters"""
-#
-#     # TODO: rewrite using mozila code
-#
-#     if not isinstance(text, str):
-#         return False
-#
-#     return len(re.sub(r"\s|\t|\n", "", text)) == 0
 
 
 def tag_name(el):
@@ -137,9 +125,6 @@ def remove_space_follow_space(text, node):
     if not text.startswith(" "):
         return text
 
-    if isinstance(node, str):
-        return text  # Can't do traversing without reference to proper node
-
     previous = node.getprevious()
     if previous is None:
         head = node.getparent().text
@@ -151,11 +136,6 @@ def remove_space_follow_space(text, node):
             return FIRST_SPACE.sub("", text)
 
     return text
-
-
-# export const isInline = (node) =>
-#   node &&
-#   (node.nodeType === TEXT_NODE || INLINE_ELEMENTS.includes(node.nodeName));
 
 
 def is_inline_dom(node):
@@ -213,12 +193,12 @@ def collapse_inline_space(node, expanded=False):
 
     https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
     """
-    text = node.text
+    text = node.text or ""
 
     if expanded:
         text = "".join(
             collapse_inline_space(n)
-            for n in [node.text or ""] + list(node.iterchildren())
+            for n in ([make_textnode(node.text, node)] + list(node.iterchildren()))
         )
 
     # 1. all spaces and tabs immediately before and after a line break are ignored
@@ -264,6 +244,13 @@ class TextNode(object):
         return []
 
 
+def make_textnode(text, node):
+    parent = node.getparent()
+    children = list(parent.iterchildren()) if parent is not None else [0]
+    first = children[0] if children else None
+    return TextNode(text, parent=node, next_=first)
+
+
 class HTML2Slate(object):
     """A parser for HTML to slate conversion
 
@@ -288,7 +275,7 @@ class HTML2Slate(object):
         if node is None:
             return []
 
-        if isinstance(node, str):
+        if isinstance(node, TextNode):
             # if is_whitespace(node):
             #     return []
             text = collapse_inline_space(node)
@@ -308,8 +295,12 @@ class HTML2Slate(object):
 
         if handler:
             element = handler(node)
-            if node.tail and collapse_inline_space(node.tail):  # was clean_whitespace
-                return [element] + self.deserialize(node.tail)
+
+            if node.tail:
+                text = make_textnode(node.tail, node)
+                if collapse_inline_space(text):  # was clean_whitespace
+                    return [element] + self.deserialize(node.tail)
+
             return [element]
 
         # fallback, "skips" the node
@@ -321,10 +312,8 @@ class HTML2Slate(object):
         :param node:
         """
 
-        parent = node.getparent()
-        children = list(parent.iterchildren()) if parent else [0]
-        first = children[0] if children else None
-        text = TextNode(node.text, parent=node, next_=first)
+        text = make_textnode(node.text, node)
+
         nodes = [text]
 
         for child in node.iterchildren():
@@ -470,3 +459,17 @@ def text_to_slate(text):
     :param text:
     """
     return HTML2Slate().to_slate(text)
+
+
+# def is_whitespace(text):
+#     """Returns true if the text is only whitespace characters"""
+#
+#     # TODO: rewrite using mozila code
+#
+#     if not isinstance(text, str):
+#         return False
+#
+#     return len(re.sub(r"\s|\t|\n", "", text)) == 0
+# export const isInline = (node) =>
+#   node &&
+#   (node.nodeType === TEXT_NODE || INLINE_ELEMENTS.includes(node.nodeName));
