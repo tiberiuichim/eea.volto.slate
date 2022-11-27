@@ -1,7 +1,5 @@
 """ test html2slate """
 # -*- coding: utf-8 -*-
-# pylint: disable=import-error,no-name-in-module,too-few-public-methods,
-# pylint: disable=not-callable,no-self-use,unused-argument,invalid-name
 
 import json
 import os
@@ -76,6 +74,16 @@ class TestTextUtilities(unittest.TestCase):
         text = remove_space_follow_space(" World!", span)
         assert text == "World!"
 
+    def test_remove_space_follow_space_after(self):
+        html = "<h1><b>Hello </b> World!</h1>"
+        fragments = fragments_fromstring(html)
+        h1 = fragments[0]
+        b = h1.query_selector("b")
+        node = b.next
+
+        text = remove_space_follow_space(" World!", node)
+        assert text == "World!"
+
     def test_remove_space_follow_space_prev_sibling(self):
         html = "<h1>   Hello <b>bla </b><span> World!</span>   </h1>"
         fragments = fragments_fromstring(html)
@@ -85,7 +93,7 @@ class TestTextUtilities(unittest.TestCase):
         text = remove_space_follow_space(" World!", span)
         assert text == "World!"
 
-    def test_remove_space_follow_space_prev_sibling_compound(self):
+    def test_remove_space_follow_space_prev_compound_sibling(self):
         html = "<h1>   Hello <b><i>bla </i></b><span> World!</span>   </h1>"
         fragments = fragments_fromstring(html)
         h1 = fragments[0]

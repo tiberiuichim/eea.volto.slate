@@ -122,22 +122,40 @@ def remove_space_follow_space(text, node):
     #     }
     #   }
     # }
-    #
     # return text;
+    # import pdb
+    #
+    # pdb.set_trace()
+
     text = MULTIPLE_SPACE.sub(" ", text)
 
     if not text.startswith(" "):
         return text
 
     previous = node.prev
-    if previous is None:
-        head = node.parent.text
-        if head.endswith(" "):
-            text = FIRST_SPACE.sub("", text)
+    if previous:
+        if previous.type == TEXT_NODE:
+            if previous.text.endswith(" "):
+                return FIRST_SPACE.sub("", text)
+        elif is_inline(previous):
+            prev_text = collapse_inline_space(previous)
+            if prev_text.endswith(" "):
+                return FIRST_SPACE.sub("", text)
     else:
-        prev_text = collapse_inline_space(previous, expanded=True)
-        if prev_text.endswith(" "):
-            return FIRST_SPACE.sub("", text)
+        parent = node.parent
+        if parent.prev:
+            prev_text = collapse_inline_space(parent.prev)
+            if prev_text and prev_text.endswith(" "):
+                return FIRST_SPACE.sub("", text)
+
+    # if previous is not None:
+    #     prev_text = collapse_inline_space(previous, expanded=True)
+    #     if prev_text.endswith(" "):
+    #         return FIRST_SPACE.sub("", text)
+    # else:
+    #     head = node.parent.text
+    #     if head.endswith(" "):
+    #         text = FIRST_SPACE.sub("", text)
 
     return text
 
@@ -151,7 +169,7 @@ def is_inline(node):
     if isinstance(node, str) or node.type == TEXT_NODE:
         return True
 
-    if node.tag in INLINE_ELEMENTS:
+    if node.tag.upper() in INLINE_ELEMENTS:
         return True
 
     return False
@@ -181,7 +199,9 @@ def remove_element_edges(text, node):
         text = FIRST_ALL_SPACE.sub("", text)
 
     if ANY_SPACE_AT_END.search(text):
-        if ((next_ is None) and (not is_inline(parent))) or next_.tag == "br":
+        if ((next_ is None) and (not is_inline(parent))) or (
+            next_ and next_.tag == "br"
+        ):
             text = ANY_SPACE_AT_END.sub("", text)
 
     return text
