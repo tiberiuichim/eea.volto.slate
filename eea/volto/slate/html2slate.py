@@ -207,6 +207,24 @@ def remove_element_edges(text, node):
     return text
 
 
+def clean_padding_text(text, node):
+    # TODO: does this make sense in real life?
+    if is_whitespace(text):
+        has_prev = node.prev and node.prev.type == ELEMENT_NODE
+        has_next = node.next and node.next.type == ELEMENT_NODE
+
+        if has_prev and has_next:
+            return ""
+
+        if node.prev and not node.next:
+            return ""
+
+        if node.next and not node.prev:
+            return ""
+
+    return text
+
+
 def collapse_inline_space(node, expanded=False):
     """See
 
@@ -214,11 +232,8 @@ def collapse_inline_space(node, expanded=False):
     """
     text = node.text or ""
 
-    # if expanded:
-    #     text = "".join(
-    #         collapse_inline_space(n)
-    #         for n in ([make_textnode(node.text, node)] + list(node.iterchildren()))
-    #     )
+    # 0 (Volto). Return None if is text between block nodes
+    text = clean_padding_text(text, node)
 
     # 1. all spaces and tabs immediately before and after a line break are ignored
     text = remove_space_before_after_endline(text)
@@ -435,15 +450,16 @@ def text_to_slate(text):
     return HTML2Slate().to_slate(text)
 
 
-# def is_whitespace(text):
-#     """Returns true if the text is only whitespace characters"""
-#
-#     # TODO: rewrite using mozila code
-#
-#     if not isinstance(text, str):
-#         return False
-#
-#     return len(re.sub(r"\s|\t|\n", "", text)) == 0
+def is_whitespace(text):
+    """Returns true if the text is only whitespace characters"""
+
+    # TODO: rewrite using mozila code
+
+    if not isinstance(text, str):
+        return False
+
+    return len(re.sub(r"\s|\t|\n", "", text)) == 0
+
 
 INLINE_ELEMENTS = [
     "A",

@@ -10,6 +10,7 @@ from pkg_resources import resource_filename
 from eea.volto.slate.html2slate import (convert_linebreaks_to_spaces,
                                         convert_tabs_to_spaces,
                                         fragments_fromstring,
+                                        merge_adjacent_text_nodes,
                                         remove_space_before_after_endline,
                                         remove_space_follow_space,
                                         text_to_slate)
@@ -193,43 +194,43 @@ class TestConvertHTML2Slate(unittest.TestCase):
             ],
         )
 
-    # # def test_merge_text_nodes(self):
-    # #     """test_merge_text_nodes."""
-    # #     q = [{"text": "a"}, {"text": "b"}, {"text": "c"}]
-    # #     res = merge_adjacent_text_nodes(q)
-    # #     self.assertEqual(res, [{"text": "abc"}])
-    # #
-    # #     q = [{"text": "a"}, {"type": "m"}, {"text": "b"}, {"text": "c"}]
-    # #     res = merge_adjacent_text_nodes(q)
-    # #     self.assertEqual(
-    # #         res,
-    # #         [
-    # #             {"text": "a"},
-    # #             {"type": "m"},
-    # #             {"text": "bc"},
-    # #         ],
-    # #     )
-    # #
-    # #     q = [
-    # #         {"text": "a"},
-    # #         {"type": "m"},
-    # #         {"text": "b"},
-    # #         {"text": "c"},
-    # #         {"type": "m"},
-    # #         {"text": "d"},
-    # #         {"text": "e"},
-    # #     ]
-    # #     res = merge_adjacent_text_nodes(q)
-    # #     self.assertEqual(
-    # #         res,
-    # #         [
-    # #             {"text": "a"},
-    # #             {"type": "m"},
-    # #             {"text": "bc"},
-    # #             {"type": "m"},
-    # #             {"text": "de"},
-    # #         ],
-    # #     )
+    def test_merge_text_nodes(self):
+        """test_merge_text_nodes."""
+        q = [{"text": "a"}, {"text": "b"}, {"text": "c"}]
+        res = merge_adjacent_text_nodes(q)
+        self.assertEqual(res, [{"text": "abc"}])
+
+        q = [{"text": "a"}, {"type": "m"}, {"text": "b"}, {"text": "c"}]
+        res = merge_adjacent_text_nodes(q)
+        self.assertEqual(
+            res,
+            [
+                {"text": "a"},
+                {"type": "m"},
+                {"text": "bc"},
+            ],
+        )
+
+        q = [
+            {"text": "a"},
+            {"type": "m"},
+            {"text": "b"},
+            {"text": "c"},
+            {"type": "m"},
+            {"text": "d"},
+            {"text": "e"},
+        ]
+        res = merge_adjacent_text_nodes(q)
+        self.assertEqual(
+            res,
+            [
+                {"text": "a"},
+                {"type": "m"},
+                {"text": "bc"},
+                {"type": "m"},
+                {"text": "de"},
+            ],
+        )
 
     def test_convert_case_simple_p(self):
         """test_convert_case_simple_p."""
@@ -241,15 +242,15 @@ class TestConvertHTML2Slate(unittest.TestCase):
             read_json("1.json"),
         )
 
-    # def test_convert_case_multiple_p(self):
-    #     """test_convert_case_multiple_p."""
-    #     text = read_data("2.html")
-    #     res = text_to_slate(text)
-    #
-    #     self.assertEqual(
-    #         res,
-    #         read_json("2.json"),
-    #     )
+    def test_convert_case_multiple_p(self):
+        """test_convert_case_multiple_p."""
+        text = read_data("2.html")
+        res = text_to_slate(text)
+
+        self.assertEqual(
+            res,
+            read_json("2.json"),
+        )
 
     # def test_one_list_item(self):
     #     text = """<li>      <a
