@@ -408,7 +408,7 @@ class HTML2Slate(object):
                 child["children"] = merge_adjacent_text_nodes(children)
                 stack.extend(child["children"])
 
-                # self._pad_with_space(child["children"])
+                self._pad_with_space(child["children"])
 
         return value
 
