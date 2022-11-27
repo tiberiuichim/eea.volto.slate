@@ -297,9 +297,9 @@ class HTML2Slate(object):
             element = handler(node)
 
             if node.tail:
-                text = make_textnode(node.tail, node)
-                if collapse_inline_space(text):  # was clean_whitespace
-                    return [element] + self.deserialize(node.tail)
+                textnode = make_textnode(node.tail, node)
+                if collapse_inline_space(textnode):  # was clean_whitespace
+                    return [element] + self.deserialize(textnode)  # was node.tail
 
             return [element]
 

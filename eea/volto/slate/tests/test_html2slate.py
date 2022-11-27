@@ -117,7 +117,7 @@ class TestConvertHTML2Slate(unittest.TestCase):
     #     """test_convert_simple_string."""
     #     res = text_to_slate("Hello world")
     #     self.assertEqual(res, [{"children": [{"text": "Hello world"}], "type": "p"}])
-    #
+
     def test_convert_simple_paragraph(self):
         """test_convert_simple_paragraph."""
         res = text_to_slate("<p>Hello world</p>")
@@ -139,27 +139,26 @@ class TestConvertHTML2Slate(unittest.TestCase):
     #         ],
     #     )
 
-    # def test_convert_text_and_a_tag(self):
-    #     """test_convert_simple_paragraph."""
-    #     res = text_to_slate(
-    #         "Hello <strong>world</strong> mixed <i>content</i>.")
-    #
-    #     self.assertEqual(
-    #         res,
-    #         [
-    #             {
-    #                 "children": [
-    #                     {"text": "Hello "},
-    #                     {"children": [{"text": "world"}], "type": "strong"},
-    #                     {"text": " mixed "},
-    #                     {"children": [{"text": "content"}], "type": "i"},
-    #                     {"text": "."},
-    #                 ],
-    #                 "type": "p",
-    #             }
-    #         ],
-    #     )
-    #
+    def test_convert_text_and_a_tag(self):
+        """test_convert_simple_paragraph."""
+        res = text_to_slate("Hello <strong>world</strong> mixed <i>content</i>.")
+
+        self.assertEqual(
+            res,
+            [
+                {
+                    "children": [
+                        {"text": "Hello "},
+                        {"children": [{"text": "world"}], "type": "strong"},
+                        {"text": " mixed "},
+                        {"children": [{"text": "content"}], "type": "i"},
+                        {"text": "."},
+                    ],
+                    "type": "p",
+                }
+            ],
+        )
+
     # def test_merge_text_nodes(self):
     #     """test_merge_text_nodes."""
     #     q = [{"text": "a"}, {"text": "b"}, {"text": "c"}]
