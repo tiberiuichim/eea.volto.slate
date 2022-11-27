@@ -113,6 +113,25 @@ class TestConvertHTML2Slate(unittest.TestCase):
 
     maxDiff = None
 
+    def test_show_resiliparse_api(self):
+        from resiliparse.parse.html import HTMLTree
+
+        html = "<p>Hello <br/>world</p>"
+        tree = HTMLTree.parse(html)
+        document = tree.document
+        body = document.query_selector("body")
+        fragments = body.child_nodes
+        (p,) = fragments
+        hello, br, world = fragments
+
+        assert hello.tag == "#text"
+        assert hello.next.tag == "br"
+        assert hello.text == "Hello "
+        assert hello.prev is None
+
+        assert br.prev.text == "Hello "
+        assert br.prev is hello
+
     # def test_convert_simple_string(self):
     #     """test_convert_simple_string."""
     #     res = text_to_slate("Hello world")
