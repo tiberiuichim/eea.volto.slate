@@ -7,17 +7,32 @@ import json
 import re
 from collections import deque
 
-from lxml.html import html5parser
+# from lxml.html import html5parser
+from resiliparse.parse.html import HTMLTree
 
 from .config import DEFAULT_BLOCK_TYPE, KNOWN_BLOCK_TYPES
 
+TEXT_NODE = 3
+ELEMENT_NODE = 1
+COMMENT = 8
 
-def tag_name(el):
-    """tag_name.
+SPACE_BEFORE_ENDLINE = re.compile(r"\s+\n", re.M)
+SPACE_AFTER_DEADLINE = re.compile(r"\n\s+", re.M)
+TAB = re.compile(r"\t", re.M)
+LINEBREAK = re.compile(r"\n", re.M)
+MULTIPLE_SPACE = re.compile(r" ( +)", re.M)
+FIRST_SPACE = re.compile("^ ", re.M)
+FIRST_ANY_SPACE = re.compile(r"^\s", re.M)
+FIRST_ALL_SPACE = re.compile(r"^\s+", re.M)
+ANY_SPACE_AT_END = re.compile(r"\s$", re.M)
 
-    :param el:
-    """
-    return el.tag.replace("{%s}" % el.nsmap["html"], "")
+
+# def tag_name(el):
+#     """tag_name.
+#
+#     :param el:
+#     """
+#     return el.tag.replace("{%s}" % el.nsmap["html"], "")
 
 
 def is_inline(el):
@@ -64,17 +79,6 @@ def merge_adjacent_text_nodes(children):
                 {"text": "".join([c["text"] for c in children[i : range_dict[i] + 1]])}
             )
     return result
-
-
-SPACE_BEFORE_ENDLINE = re.compile(r"\s+\n", re.M)
-SPACE_AFTER_DEADLINE = re.compile(r"\n\s+", re.M)
-TAB = re.compile(r"\t", re.M)
-LINEBREAK = re.compile(r"\n", re.M)
-MULTIPLE_SPACE = re.compile(r" ( +)", re.M)
-FIRST_SPACE = re.compile("^ ", re.M)
-FIRST_ANY_SPACE = re.compile(r"^\s", re.M)
-FIRST_ALL_SPACE = re.compile(r"^\s+", re.M)
-ANY_SPACE_AT_END = re.compile(r"\s$", re.M)
 
 
 def remove_space_before_after_endline(text):
@@ -125,7 +129,7 @@ def remove_space_follow_space(text, node):
     if not text.startswith(" "):
         return text
 
-    previous = node.getprevious()
+    previous = node.prev
     if previous is None:
         head = node.getparent().text
         if head.endswith(" "):
@@ -167,9 +171,9 @@ def remove_element_edges(text, node):
     if isinstance(node, str):
         return text
 
-    previous = node.getprevious()
-    next_ = node.getnext()
-    parent = node.getparent()
+    previous = node.prev
+    next_ = node.next
+    parent = node.parent
 
     if (
         (not is_inline_dom(parent))
@@ -195,11 +199,11 @@ def collapse_inline_space(node, expanded=False):
     """
     text = node.text or ""
 
-    if expanded:
-        text = "".join(
-            collapse_inline_space(n)
-            for n in ([make_textnode(node.text, node)] + list(node.iterchildren()))
-        )
+    # if expanded:
+    #     text = "".join(
+    #         collapse_inline_space(n)
+    #         for n in ([make_textnode(node.text, node)] + list(node.iterchildren()))
+    #     )
 
     # 1. all spaces and tabs immediately before and after a line break are ignored
     text = remove_space_before_after_endline(text)
@@ -220,35 +224,11 @@ def collapse_inline_space(node, expanded=False):
     return text
 
 
-class TextNode(object):
-    """Pseudo-TextNode element, mimics browser DOMParser API, where text is DOM node"""
-
-    def __init__(self, text, parent=None, previous=None, next_=None):
-        self.text = text
-        self.parent = parent
-
-        _children = list(parent.iterchildren())
-        self.next_ = _children[0] if _children else None
-        self.previous = previous
-
-    def getparent(self):
-        return self.parent
-
-    def getprevious(self):
-        return self.previous
-
-    def getnext(self):
-        return self.next_
-
-    def iterchildren(self):
-        return []
-
-
-def make_textnode(text, node):
-    parent = node.getparent()
-    children = list(parent.iterchildren()) if parent is not None else [0]
-    first = children[0] if children else None
-    return TextNode(text, parent=node, next_=first)
+def fragments_fromstring(text):
+    tree = HTMLTree.parse(text)
+    document = tree.document
+    body = document.query_selector("body")
+    return body.child_nodes
 
 
 class HTML2Slate(object):
@@ -262,7 +242,7 @@ class HTML2Slate(object):
     def to_slate(self, text):
         "Convert text to a slate value. A slate value is a list of elements"
 
-        fragments = html5parser.fragments_fromstring(text)
+        fragments = fragments_fromstring(text)
         nodes = []
         for f in fragments:
             nodes += self.deserialize(f)
@@ -270,23 +250,21 @@ class HTML2Slate(object):
         return self.normalize(nodes)
 
     def deserialize(self, node):
-        """Deserialize a node into a _list_ of slate elements"""
+        """Deserialize a node into a list Slate Nodes"""
 
         if node is None:
             return []
 
-        if isinstance(node, TextNode):
-            # if is_whitespace(node):
-            #     return []
+        if node.tag == "#text":
             text = collapse_inline_space(node)
-
             return [{"text": text}] if text else None
+        elif node.type != ELEMENT_NODE:
+            return None
 
-        tagname = tag_name(node)
-
+        tagname = node.tag
         handler = None
 
-        if node.attrib.get("data-slate-data"):
+        if "data-slate-data" in node.attrs:
             handler = self.handle_slate_data_element
         else:
             handler = getattr(self, "handle_tag_{}".format(tagname), None)
@@ -294,14 +272,10 @@ class HTML2Slate(object):
                 handler = self.handle_block
 
         if handler:
-            element = handler(node)
-
-            if node.tail:
-                textnode = make_textnode(node.tail, node)
-                if collapse_inline_space(textnode):  # was clean_whitespace
-                    return [element] + self.deserialize(textnode)  # was node.tail
-
-            return [element]
+            slate_node = handler(node)
+            if not isinstance(slate_node, list):
+                slate_node = [slate_node]
+            return slate_node
 
         # fallback, "skips" the node
         return self.handle_fallback(node)
@@ -312,27 +286,14 @@ class HTML2Slate(object):
         :param node:
         """
 
-        text = make_textnode(node.text, node)
-
-        nodes = [text]
-
-        for child in node.iterchildren():
-            nodes.append(child)
-            if child.tail:
-                text = TextNode(
-                    child.tail,
-                    parent=child.getparent(),
-                    previous=child,
-                    next=child.getnext(),
-                )
-                nodes.append(text)
-            # if is_whitespace(child.tail):
-            #     nodes.append(child.tail)
-
         res = []
-        for x in nodes:
-            # if x is not None:
-            res += self.deserialize(x)
+
+        for child in node.child_nodes:
+            b = self.deserialize(child)
+            if isinstance(b, list):
+                res += b
+            elif b:
+                res.append(b)
 
         return res
 
@@ -376,7 +337,7 @@ class HTML2Slate(object):
 
         :param node:
         """
-        return {"type": tag_name(node), "children": self.deserialize_children(node)}
+        return {"type": node.tag, "children": self.deserialize_children(node)}
 
     def handle_tag_b(self, node):
         # TO DO: implement <b> special cases
@@ -387,19 +348,16 @@ class HTML2Slate(object):
 
         :param node:
         """
-        element = json.loads(node.attrib["data-slate-data"])
+        element = json.loads(node["data-slate-data"])
         element["children"] = self.deserialize_children(node)
         return element
 
     def handle_fallback(self, node):
-        "Unknown tags (for example span) are handled as pipe-through"
-        return node
-
-        # nodes = self.deserialize_children(node) + self.deserialize(node.tail)
-        # return nodes
+        """Unknown tags (for example span) are handled as pipe-through"""
+        return self.deserialize_children(node)
 
     def normalize(self, value):
-        "Normalize value to match Slate constraints"
+        """Normalize value to match Slate constraints"""
 
         assert isinstance(value, list)
         value = [v for v in value if v is not None]
