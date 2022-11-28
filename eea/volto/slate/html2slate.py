@@ -23,14 +23,6 @@ FIRST_ALL_SPACE = re.compile(r"^\s+", re.M)
 ANY_SPACE_AT_END = re.compile(r"\s$", re.M)
 
 
-# def tag_name(el):
-#     """tag_name.
-#
-#     :param el:
-#     """
-#     return el.tag.replace("{%s}" % el.nsmap["html"], "")
-
-
 def is_inline_slate(el):
     """Returns true if the element is a text node
 
@@ -92,32 +84,9 @@ def convert_linebreaks_to_spaces(text):
 
 
 def remove_space_follow_space(text, node):
-    # // Any space immediately following another space (even across two separate
-    # // inline elements) is ignored (rule 4)
-    # text = text.replace(/ ( +)/gm, ' ');
-    # if (!text.startsWith(' ')) return text;
-    #
-    # if (node.previousSibling) {
-    #   if (node.previousSibling.nodeType === TEXT_NODE) {
-    #     if (node.previousSibling.textContent.endsWith(' ')) {
-    #       return text.replace(/^ /, '');
-    #     }
-    #   } else if (isInline(node.previousSibling)) {
-    #     const prevText = collapseInlineSpace(node.previousSibling);
-    #     if (prevText.endsWith(' ')) {
-    #       return text.replace(/^ /, '');
-    #     }
-    #   }
-    # } else {
-    #   const parent = node.parentNode;
-    #   if (parent.previousSibling) {
-    #     //  && isInline(parent.previousSibling)
-    #     const prevText = collapseInlineSpace(parent.previousSibling);
-    #     if (prevText && prevText.endsWith(' ')) {
-    #       return text.replace(/^ /, '');
-    #     }
-    #   }
-    # }
+    """Any space immediately following another space (even across two separate inline
+    elements) is ignored (rule 4)
+    """
 
     text = MULTIPLE_SPACE.sub(" ", text)
 
@@ -139,15 +108,6 @@ def remove_space_follow_space(text, node):
             prev_text = collapse_inline_space(parent.prev)
             if prev_text and prev_text.endswith(" "):
                 return FIRST_SPACE.sub("", text)
-
-    # if previous is not None:
-    #     prev_text = collapse_inline_space(previous, expanded=True)
-    #     if prev_text.endswith(" "):
-    #         return FIRST_SPACE.sub("", text)
-    # else:
-    #     head = node.parent.text
-    #     if head.endswith(" "):
-    #         text = FIRST_SPACE.sub("", text)
 
     return text
 
@@ -180,7 +140,8 @@ def remove_element_edges(text, node):
 
 
 def clean_padding_text(text, node):
-    # TODO: does this make sense in real life?
+    """Cleans head/tail whitespaces of a single html text with multiple toplevel tags"""
+
     if is_whitespace(text):
         has_prev = node.prev and node.prev.type == ELEMENT_NODE
         has_next = node.next and node.next.type == ELEMENT_NODE
@@ -220,7 +181,7 @@ def collapse_inline_space(node, expanded=False):
     # (even across two separate inline elements) is ignored
     text = remove_space_follow_space(text, node)
 
-    # // 5. Sequences of spaces at the beginning and end of an element are removed
+    # 5. Sequences of spaces at the beginning and end of an element are removed
     text = remove_element_edges(text, node)
 
     return text
@@ -404,7 +365,7 @@ class HTML2Slate(object):
         """
 
         # TO DO: needs reimplementation according to above info
-        if children == 0:
+        if len(children) == 0:
             children.append({"text": ""})
             return
 

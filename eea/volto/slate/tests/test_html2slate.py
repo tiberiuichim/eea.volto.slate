@@ -340,27 +340,52 @@ class TestConvertHTML2Slate(unittest.TestCase):
             ],
         )
 
-    # # def test_convert_slate_output_markup(self):
-    # #    """test_convert_slate_output_markup."""
-    # #    text = read_data("5.html")
-    # #    res = text_to_slate(text)
-    # #
-    # #    self.assertEqual(
-    # #        res,
-    # #        read_json("5.json"),
-    # #    )
-    # #
+    def test_convert_slate_output_markup(self):
+        """test_convert_slate_output_markup."""
+        text = read_data("5.html")
+        res = text_to_slate(text)
 
-    # # TODO: this test is wrong, the 6.json needs to be updated
-    # def test_slate_list(self):
-    #     """test_slate_list."""
-    #     text = read_data("6.html")
-    #     res = text_to_slate(text)
-    #
-    #     self.assertEqual(
-    #         res,
-    #         read_json("6.json"),
-    #     )
+        self.assertEqual(
+            res,
+            read_json("5.json"),
+        )
+
+    # TODO: this test is wrong, the 6.json needs to be updated
+    def test_slate_list(self):
+        """test_slate_list."""
+        text = read_data("6.html")
+        res = text_to_slate(text)
+        import pdb
+
+        pdb.set_trace()
+
+        self.assertEqual(
+            res,
+            read_json("6.json"),
+        )
+
+    def test_link_with_space(self):
+        html = "<li><a href='/'>      Black stork</a></li>"
+        res = text_to_slate(html)
+        self.assertEqual(
+            res,
+            [
+                {
+                    "children": [
+                        {"text": ""},
+                        {
+                            "children": [{"text": "Black stork"}],
+                            "data": {
+                                "link": {"internal": {"internal_link": [{"@id": "/"}]}}
+                            },
+                            "type": "a",
+                        },
+                        {"text": ""},
+                    ],
+                    "type": "li",
+                }
+            ],
+        )
 
     def test_slate_data(self):
         """test_slate_list."""
@@ -371,11 +396,11 @@ class TestConvertHTML2Slate(unittest.TestCase):
             read_json("7.json"),
         )
 
-    # def test_wrapped_slate_data(self):
-    #     """test_wrapped_slate_data."""
-    #     text = read_data("8.html")
-    #     res = text_to_slate(text)
-    #     self.assertEqual(
-    #         res,
-    #         read_json("8.json"),
-    #     )
+    def test_wrapped_slate_data(self):
+        """test_wrapped_slate_data."""
+        text = read_data("8.html")
+        res = text_to_slate(text)
+        self.assertEqual(
+            res,
+            read_json("8.json"),
+        )
