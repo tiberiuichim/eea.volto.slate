@@ -108,6 +108,8 @@ def remove_space_follow_space(text, node):
             prev_text = collapse_inline_space(parent.prev)
             if prev_text and prev_text.endswith(" "):
                 return FIRST_SPACE.sub("", text)
+        else:
+            return FIRST_SPACE.sub("", text)
 
     return text
 
