@@ -195,6 +195,33 @@ class TestConvertHTML2Slate(unittest.TestCase):
             ],
         )
 
+    def test_remove_space_complex(self):
+        html = "<p>\n<b>\n<span>\n  <i><span>28.06</span>(percent) </i>\n</span>%</b> of land,\n</p>"
+        res = text_to_slate(html)
+        self.assertEqual(
+            res,
+            [
+                {
+                    "children": [
+                        {"text": ""},
+                        {
+                            "children": [
+                                {"text": ""},
+                                {
+                                    "children": [{"text": "28.06(percent) "}],
+                                    "type": "i",
+                                },
+                                {"text": "%"},
+                            ],
+                            "type": "b",
+                        },
+                        {"text": " of land,"},
+                    ],
+                    "type": "p",
+                }
+            ],
+        )
+
     def test_convert_text_and_tag(self):
         """test_convert_simple_paragraph."""
         res = text_to_slate("Hello <strong>world</strong> mixed <i>content</i>.")
