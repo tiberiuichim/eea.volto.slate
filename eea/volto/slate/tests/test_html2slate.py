@@ -350,14 +350,10 @@ class TestConvertHTML2Slate(unittest.TestCase):
             read_json("5.json"),
         )
 
-    # TODO: this test is wrong, the 6.json needs to be updated
     def test_slate_list(self):
         """test_slate_list."""
         text = read_data("6.html")
         res = text_to_slate(text)
-        import pdb
-
-        pdb.set_trace()
 
         self.assertEqual(
             res,
