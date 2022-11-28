@@ -7,14 +7,10 @@ import json
 import re
 from collections import deque
 
-# from lxml.html import html5parser
 from resiliparse.parse.html import HTMLTree
 
-from .config import DEFAULT_BLOCK_TYPE, KNOWN_BLOCK_TYPES
-
-TEXT_NODE = 3
-ELEMENT_NODE = 1
-COMMENT = 8
+from .config import (DEFAULT_BLOCK_TYPE, ELEMENT_NODE, INLINE_ELEMENTS,
+                     KNOWN_BLOCK_TYPES, TEXT_NODE)
 
 SPACE_BEFORE_ENDLINE = re.compile(r"\s+\n", re.M)
 SPACE_AFTER_DEADLINE = re.compile(r"\n\s+", re.M)
@@ -122,10 +118,6 @@ def remove_space_follow_space(text, node):
     #     }
     #   }
     # }
-    # return text;
-    # import pdb
-    #
-    # pdb.set_trace()
 
     text = MULTIPLE_SPACE.sub(" ", text)
 
@@ -160,11 +152,6 @@ def remove_space_follow_space(text, node):
     return text
 
 
-# export const isInline = (node) =>
-#   node &&
-#   (node.nodeType === TEXT_NODE || INLINE_ELEMENTS.includes(node.nodeName));
-
-
 def is_inline(node):
     if isinstance(node, str) or node.type == TEXT_NODE:
         return True
@@ -176,21 +163,6 @@ def is_inline(node):
 
 
 def remove_element_edges(text, node):
-    # export const removeElementEdges = (text, node) => {
-    #   if (
-    #     !isInline(node.parentNode) &&
-    #     !node.previousSibling &&
-    #     text.match(/^\s/)
-    #   ) {
-    #     text = text.replace(/^\s+/, '');
-    #   }
-    #
-    #   if (text.match(/\s$/) && !node.nextSibling && !isInline(node.parentNode)) {
-    #     text = text.replace(/\s$/, '');
-    #   }
-    #
-    #   return text;
-    # };
     previous = node.prev
     next_ = node.next
     parent = node.parent
@@ -459,98 +431,3 @@ def is_whitespace(text):
         return False
 
     return len(re.sub(r"\s|\t|\n", "", text)) == 0
-
-
-INLINE_ELEMENTS = [
-    "A",
-    "ABBR",
-    "ACRONYM",
-    "AUDIO",
-    "B",
-    "BDI",
-    "BDO",
-    "BIG",
-    "BR",
-    "BUTTON",
-    "CANVAS",
-    "CITE",
-    "CODE",
-    "DATA",
-    "DATALIST",
-    "DEL",
-    "DFN",
-    "EM",
-    "EMBED",
-    "I",
-    "IFRAME",
-    "IMG",
-    "INPUT",
-    "INS",
-    "KBD",
-    "LABEL",
-    "MAP",
-    "MARK",
-    "METER",
-    "NOSCRIPT",
-    "OBJECT",
-    "OUTPUT",
-    "PICTURE",
-    "PROGRESS",
-    "Q",
-    "RUBY",
-    "S",
-    "SAMP",
-    "SCRIPT",
-    "SELECT",
-    "SLOT",
-    "SMALL",
-    "SPAN",
-    "STRONG",
-    "SUB",
-    "SUP",
-    "SVG",
-    "TEMPLATE",
-    "TEXTAREA",
-    "TIME",
-    "U",
-    "TT",
-    "VAR",
-    "VIDEO",
-    "WBR",
-]
-
-BLOCK_ELEMENTS = [
-    "ADDRESS",
-    "ARTICLE",
-    "ASIDE",
-    "BLOCKQUOTE",
-    "DETAILS",
-    "DIALOG",
-    "DD",
-    "DIV",
-    "DL",
-    "DT",
-    "FIELDSET",
-    "FIGCAPTION",
-    "FIGURE",
-    "FOOTER",
-    "FORM",
-    "H1",
-    "H2",
-    "H3",
-    "H4",
-    "H5",
-    "H6",
-    "HEADER",
-    "HGROUP",
-    "HR",
-    "LI",
-    "MAIN",
-    "NAV",
-    "OL",
-    "P",
-    "PRE",
-    "SECTION",
-    "TABLE",
-    "UL",
-]

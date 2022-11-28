@@ -324,12 +324,11 @@ class TestConvertHTML2Slate(unittest.TestCase):
             read_json("7.json"),
         )
 
-    # #
-    # # def test_wrapped_slate_data(self):
-    # #    """test_wrapped_slate_data."""
-    # #    text = read_data("8.html")
-    # #    res = text_to_slate(text)
-    # #    self.assertEqual(
-    # #        res,
-    # #        read_json("8.json"),
-    # #    )
+    def test_wrapped_slate_data(self):
+        """test_wrapped_slate_data."""
+        text = read_data("8.html")
+        res = text_to_slate(text)
+        self.assertEqual(
+            res,
+            read_json("8.json"),
+        )
